@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rally</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #c8d4dc;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+      }
+      #renderCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        outline: none;
+        touch-action: none;
+      }
+      #hud {
+        position: fixed;
+        left: 12px;
+        top: 12px;
+        color: #1f2933;
+        font-size: 13px;
+        line-height: 1.4;
+        pointer-events: none;
+        white-space: pre;
+        opacity: 0.85;
+      }
+      #designHint {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.92);
+        color: #1f2933;
+        padding: 22px 28px;
+        border-radius: 12px;
+        box-shadow: 0 12px 32px rgba(20, 30, 40, 0.18);
+        font-size: 14px;
+        line-height: 1.55;
+        max-width: 420px;
+        pointer-events: none;
+        text-align: left;
+        display: none;
+      }
+      #designHint.visible {
+        display: block;
+      }
+      #designHint h2 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+      #designHint ol {
+        margin: 8px 0 4px 18px;
+        padding: 0;
+      }
+      #designHint li {
+        margin: 3px 0;
+      }
+      #designHint .key {
+        display: inline-block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: #eef1f4;
+        color: #1f2933;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        border: 1px solid #d5dae0;
+      }
+      #designHint .muted {
+        color: #5a6470;
+        font-size: 12px;
+        margin-top: 10px;
+      }
+      #menu {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.95);
+        color: #1f2933;
+        padding: 24px 28px;
+        border-radius: 12px;
+        box-shadow: 0 12px 32px rgba(20, 30, 40, 0.18);
+        font-size: 14px;
+        line-height: 1.5;
+        max-width: 460px;
+        text-align: left;
+        display: none;
+      }
+      #menu.visible {
+        display: block;
+      }
+      #menu h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      #menu .opt {
+        display: block;
+        width: 100%;
+        margin: 8px 0;
+        padding: 12px 14px;
+        background: #f5f7fa;
+        border: 1px solid #d5dae0;
+        border-radius: 8px;
+        font: inherit;
+        color: #1f2933;
+        text-align: left;
+        cursor: pointer;
+      }
+      #menu .opt:hover {
+        background: #e8edf3;
+      }
+      #menu .opt strong {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 2px;
+      }
+      #menu .opt span {
+        font-size: 12px;
+        color: #5a6470;
+      }
+      #menu .carOpt {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-height: 112px;
+      }
+      #menu .carCopy {
+        flex: 1;
+        min-width: 0;
+      }
+      #menu .carPreviewCanvas {
+        width: 150px;
+        height: 92px;
+        flex: 0 0 150px;
+        border-radius: 8px;
+        background: linear-gradient(180deg, rgba(180,205,220,0.45), rgba(230,235,226,0.55));
+      }
+
+      /* ── mobile touch controls ─────────────────────────────────────── */
+      #mobileControls {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        display: none;
+      }
+      #mobileControls.visible { display: block; }
+      #mobileControls .pedal {
+        position: absolute;
+        bottom: max(24px, env(safe-area-inset-bottom));
+        width: 22vw;
+        max-width: 140px;
+        min-width: 90px;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        border: none;
+        font: 600 16px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #fff;
+        text-align: center;
+        pointer-events: auto;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: none;
+        opacity: 0.78;
+        box-shadow: 0 6px 18px rgba(20, 30, 40, 0.25);
+        transition: transform 80ms ease, opacity 80ms ease;
+      }
+      #mobileControls .pedal.pressed {
+        transform: scale(0.94);
+        opacity: 1;
+      }
+      #mobileControls .pedal.throttle {
+        right: max(20px, env(safe-area-inset-right));
+        background: #2ea36a;
+      }
+      #mobileControls .pedal.brake {
+        left: max(20px, env(safe-area-inset-left));
+        background: #c14545;
+      }
+      #mobileControls .menuBtn {
+        position: absolute;
+        top: max(12px, env(safe-area-inset-top));
+        right: max(12px, env(safe-area-inset-right));
+        padding: 8px 14px;
+        background: rgba(255, 255, 255, 0.85);
+        color: #1f2933;
+        border: 1px solid #d5dae0;
+        border-radius: 8px;
+        font: 600 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+        pointer-events: auto;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      /* iOS permission gate, shown once at startup on motion-capable browsers. */
+      #motionGate {
+        position: fixed;
+        inset: 0;
+        background: rgba(20, 26, 33, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+      }
+      #motionGate.visible { display: flex; }
+      #motionGate .card {
+        background: #fff;
+        color: #1f2933;
+        padding: 22px 26px;
+        border-radius: 12px;
+        max-width: 320px;
+        text-align: center;
+        font-size: 14px;
+        line-height: 1.5;
+        box-shadow: 0 12px 32px rgba(20, 30, 40, 0.25);
+      }
+      #motionGate button {
+        margin-top: 14px;
+        padding: 10px 18px;
+        background: #2f6df0;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font: 600 14px ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      /* Compact HUD on narrow screens. */
+      @media (max-width: 720px) {
+        #hud { font-size: 11px; opacity: 0.7; }
+        #menu { max-width: 92vw; padding: 18px 18px; font-size: 13px; }
+        #menu .carOpt { gap: 10px; min-height: 92px; }
+        #menu .carPreviewCanvas { width: 110px; height: 72px; flex-basis: 110px; }
+        #designHint { max-width: 92vw; font-size: 13px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="renderCanvas"></canvas>
+      <div id="hud"></div>
+      <div id="designHint">
+        <h2>Draw your rally track</h2>
+        <ol>
+          <li>Press and hold the <span class="key">left mouse button</span> on the ground.</li>
+          <li>Drag to sketch the path your car will follow. Smooth, flowing curves drive best.</li>
+          <li>Release the mouse when you reach the finish line.</li>
+        </ol>
+        <p>
+          Press <span class="key">Enter</span> to build the track and start driving.<br />
+          Use the <span class="key">mouse wheel</span> to zoom the top-down view.<br />
+          Drawing again will replace your previous path.
+        </p>
+        <p class="muted">Tip: keep curves wide. Tight hairpins are hard to take at speed.</p>
+      </div>
+      <div id="menu"></div>
+      <div id="mobileControls">
+        <button id="btnBrake" class="pedal brake" aria-label="Brake">BRAKE</button>
+        <button id="btnThrottle" class="pedal throttle" aria-label="Throttle">GAS</button>
+        <button id="btnMenu" class="menuBtn" aria-label="Menu">MENU</button>
+      </div>
+      <div id="motionGate">
+        <div class="card">
+          <strong>Tilt to steer</strong>
+          <p>Hold your phone in landscape and tilt left/right to steer. We need your permission to read the device's tilt sensors.</p>
+          <button id="motionGateBtn">Enable tilt steering</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
