@@ -13,7 +13,7 @@ import {
 import { buildEndlessTrack, type EndlessTrack } from "./track/streamer";
 import { TrackDesigner } from "./track/designer";
 import { createVehicle, type Vehicle } from "./vehicle/vehicle";
-import { CARS, PORSCHE_911_GT3_RS, type CarSpec } from "./vehicle/cars";
+import { CARS, APEX_RS, type CarSpec } from "./vehicle/cars";
 import { buildVegetation, type Vegetation } from "./world/vegetation";
 import { buildEndlessProps, type EndlessProps } from "./world/endlessProps";
 import { buildTerrainFeatures, type TerrainFeatures } from "./world/terrain";
@@ -87,7 +87,7 @@ let vehicle: Vehicle | null = null;
 let vegetation: Vegetation | null = null;
 let terrainFeatures: TerrainFeatures | null = null;
 let endlessProps: EndlessProps | null = null;
-let selectedCar: CarSpec = PORSCHE_911_GT3_RS;
+let selectedCar: CarSpec = APEX_RS;
 let carPreviews: CarPreview[] = [];
 
 // ── menu ──────────────────────────────────────────────────────────────────

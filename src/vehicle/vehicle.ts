@@ -409,7 +409,7 @@ function collectOwnedVehicleMaterials(root: TransformNode): Set<StandardMaterial
 }
 
 function isOwnedVehicleMaterial(name: string): boolean {
-  return name.startsWith("p911.") || name.startsWith("f40.") || name.startsWith("huracan.");
+  return name.startsWith("apex.") || name.startsWith("retro.") || name.startsWith("strada.");
 }
 
 function setYaw(body: RAPIER.RigidBody, yaw: number): void {

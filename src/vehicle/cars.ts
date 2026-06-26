@@ -80,9 +80,9 @@ function makeMat(name: string, scene: Scene, color: Color3): StandardMaterial {
   return m;
 }
 
-// ── Porsche 911 GT3 RS (992) ──────────────────────────────────────────────
+// ── Apex RS ────────────────────────────────────────────────────────────────
 
-function buildPorsche911Visual(
+function buildApexRsVisual(
   root: TransformNode,
   scene: Scene,
   materials: Materials,
@@ -91,24 +91,24 @@ function buildPorsche911Visual(
   const half = spec.chassisHalf;
   const visY = spec.bodyVisHalfY;
 
-  const bodyMat = makeMat("p911.body.mat", scene, spec.bodyColor);
+  const bodyMat = makeMat("apex.body.mat", scene, spec.bodyColor);
   // Carbon-fibre weave look for the aero parts — near-black with a hint of
   // grey so they read separately from the painted body.
-  const carbonMat = makeMat("p911.carbon.mat", scene, new Color3(0.08, 0.09, 0.10));
+  const carbonMat = makeMat("apex.carbon.mat", scene, new Color3(0.08, 0.09, 0.10));
 
-  // ── main body (lower, wider stance than a base 911) ──
+  // ── main body (low, wide stance) ──
   const bodyMesh = MeshBuilder.CreateBox(
-    "p911.body",
+    "apex.body",
     { width: half.x * 2, height: visY * 1.4, depth: half.z * 2 },
     scene,
   );
   bodyMesh.parent = root;
   bodyMesh.material = bodyMat;
 
-  // ── wide rear fenders (GT3 RS is 1900 mm wide) ──
+  // ── wide rear fenders ──
   for (const sx of [-1, 1]) {
     const fender = MeshBuilder.CreateBox(
-      "p911.fender",
+      "apex.fender",
       { width: 0.16, height: visY * 1.0, depth: half.z * 0.95 },
       scene,
     );
@@ -119,19 +119,19 @@ function buildPorsche911Visual(
 
   // ── greenhouse / fastback cabin (set toward rear, RS has roll cage hints) ──
   const cabin = MeshBuilder.CreateBox(
-    "p911.cabin",
+    "apex.cabin",
     { width: half.x * 1.55, height: 0.50, depth: half.z * 0.60 },
     scene,
   );
   cabin.position.set(0, visY * 0.75 + 0.25, -0.35);
   cabin.parent = root;
-  const glassMat = materials.carDark.clone("p911.glass");
+  const glassMat = materials.carDark.clone("apex.glass");
   glassMat.emissiveColor.set(0.05, 0.06, 0.08);
   cabin.material = glassMat;
 
   // ── front splitter (huge on the RS) ──
   const splitter = MeshBuilder.CreateBox(
-    "p911.splitter",
+    "apex.splitter",
     { width: half.x * 2.05, height: 0.05, depth: 0.30 },
     scene,
   );
@@ -141,7 +141,7 @@ function buildPorsche911Visual(
 
   // ── front lip / dive planes ──
   const lip = MeshBuilder.CreateBox(
-    "p911.lip",
+    "apex.lip",
     { width: half.x * 1.75, height: 0.07, depth: 0.20 },
     scene,
   );
@@ -151,7 +151,7 @@ function buildPorsche911Visual(
   // Canards at each side of the bumper.
   for (const sx of [-1, 1]) {
     const canard = MeshBuilder.CreateBox(
-      "p911.canard",
+      "apex.canard",
       { width: 0.30, height: 0.03, depth: 0.18 },
       scene,
     );
@@ -164,7 +164,7 @@ function buildPorsche911Visual(
   // ── NACA hood ducts (two black slits on the front hood) ──
   for (const sx of [-1, 1]) {
     const naca = MeshBuilder.CreateBox(
-      "p911.naca",
+      "apex.naca",
       { width: 0.16, height: 0.04, depth: 0.55 },
       scene,
     );
@@ -177,7 +177,7 @@ function buildPorsche911Visual(
   for (const sx of [-1, 1]) {
     for (let i = 0; i < 4; i++) {
       const fin = MeshBuilder.CreateBox(
-        "p911.sideFin",
+        "apex.sideFin",
         { width: 0.04, height: 0.18, depth: 0.32 },
         scene,
       );
@@ -190,7 +190,7 @@ function buildPorsche911Visual(
   // ── rear deck lid louvres ──
   for (let i = 0; i < 4; i++) {
     const slat = MeshBuilder.CreateBox(
-      "p911.slat",
+      "apex.slat",
       { width: half.x * 1.35, height: 0.03, depth: 0.05 },
       scene,
     );
@@ -199,14 +199,14 @@ function buildPorsche911Visual(
     slat.material = carbonMat;
   }
 
-  // ── SWAN-NECK rear wing (the GT3 RS signature) ──
+  // ── SWAN-NECK rear wing ──
   // Wing is mounted *from the top* via two slender uprights that curve over
   // and attach to the upper surface of the airfoil. Boxes can't curve, so
   // we fake it with a vertical pylon + a forward-leaning strut.
   const wingY = visY * 1.0 + 0.78;
   const wingZ = -half.z + 0.05;
   const airfoil = MeshBuilder.CreateBox(
-    "p911.wing.airfoil",
+    "apex.wing.airfoil",
     { width: half.x * 1.95, height: 0.06, depth: 0.46 },
     scene,
   );
@@ -217,7 +217,7 @@ function buildPorsche911Visual(
   // End plates — large vertical fins at each tip.
   for (const sx of [-1, 1]) {
     const plate = MeshBuilder.CreateBox(
-      "p911.wing.endplate",
+      "apex.wing.endplate",
       { width: 0.04, height: 0.30, depth: 0.50 },
       scene,
     );
@@ -233,7 +233,7 @@ function buildPorsche911Visual(
   const pylonH = pylonTop - pylonBot;
   for (const sx of [-1, 1]) {
     const pylon = MeshBuilder.CreateBox(
-      "p911.wing.pylon",
+      "apex.wing.pylon",
       { width: 0.05, height: pylonH, depth: 0.08 },
       scene,
     );
@@ -244,7 +244,7 @@ function buildPorsche911Visual(
     // Short forward-leaning strut that simulates the swan-neck curve over
     // the top of the airfoil.
     const strut = MeshBuilder.CreateBox(
-      "p911.wing.strut",
+      "apex.wing.strut",
       { width: 0.05, height: 0.06, depth: 0.16 },
       scene,
     );
@@ -255,7 +255,7 @@ function buildPorsche911Visual(
 
   // ── rear diffuser ──
   const diffuser = MeshBuilder.CreateBox(
-    "p911.diffuser",
+    "apex.diffuser",
     { width: half.x * 1.85, height: 0.06, depth: 0.35 },
     scene,
   );
@@ -264,13 +264,13 @@ function buildPorsche911Visual(
   diffuser.material = carbonMat;
 
   // ── headlights (round, sunk into the front fenders) ──
-  const hlMat = new StandardMaterial("p911.headlight", scene);
+  const hlMat = new StandardMaterial("apex.headlight", scene);
   hlMat.diffuseColor.set(0.92, 0.9, 0.78);
   hlMat.emissiveColor.set(0.18, 0.16, 0.12);
   hlMat.specularColor.set(0, 0, 0);
   for (const sx of [-1, 1]) {
     const hl = MeshBuilder.CreateDisc(
-      "p911.hl",
+      "apex.hl",
       { radius: 0.14, tessellation: 12 },
       scene,
     );
@@ -283,9 +283,9 @@ function buildPorsche911Visual(
   //    is drawn by the vehicle module; here we add nothing extra). ──
 }
 
-export const PORSCHE_911_GT3_RS: CarSpec = {
-  id: "porsche-911-gt3-rs",
-  label: "Porsche 911 GT3 RS (992)",
+export const APEX_RS: CarSpec = {
+  id: "apex-rs",
+  label: "Apex RS",
   description:
     "1450 kg • 525 PS NA flat-six RWD • swan-neck wing, huge aero, razor-sharp turn-in.",
   chassisHalf: { x: 0.95, y: 0.16, z: 2.21 },
@@ -295,7 +295,7 @@ export const PORSCHE_911_GT3_RS: CarSpec = {
   wheelRadiusRear: 0.36,
   wheelLocalPos: { frontX: 0.82, rearX: 0.84, frontZ: 1.24, rearZ: 1.24, y: 0.12 },
 
-  // Stiffer than a base 911 — track-focused damper rates.
+  // Stiffer than the base sports setup — track-focused damper rates.
   suspensionRest: 0.30,
   suspensionTravel: 0.14,
   suspensionStiffness: 46000,
@@ -318,16 +318,16 @@ export const PORSCHE_911_GT3_RS: CarSpec = {
   powerOverRearScale: 0.92,
 
   linearDamping: 0.09,
-  angularDamping: 0.78,        // less yaw damping than base 911 → more agile
+  angularDamping: 0.78,        // less yaw damping → more agile
 
-  // Iconic Python Green PTS color associated with the GT3 RS.
+  // Bright green track-special color.
   bodyColor: new Color3(0.51, 0.74, 0.20),
-  buildVisual: buildPorsche911Visual,
+  buildVisual: buildApexRsVisual,
 };
 
-// ── Ferrari F40 ───────────────────────────────────────────────────────────
+// ── Retro Wedge ───────────────────────────────────────────────────────────
 
-function buildFerrariF40Visual(
+function buildRetroWedgeVisual(
   root: TransformNode,
   scene: Scene,
   materials: Materials,
@@ -336,21 +336,21 @@ function buildFerrariF40Visual(
   const half = spec.chassisHalf;
   const visY = spec.bodyVisHalfY;
 
-  const bodyMat = makeMat("f40.body.mat", scene, spec.bodyColor);
+  const bodyMat = makeMat("retro.body.mat", scene, spec.bodyColor);
 
   // Main wedge body.
   const bodyMesh = MeshBuilder.CreateBox(
-    "f40.body",
+    "retro.body",
     { width: half.x * 2, height: visY * 1.4, depth: half.z * 2 },
     scene,
   );
   bodyMesh.parent = root;
   bodyMesh.material = bodyMat;
 
-  // Pop-up headlight area is flat — F40 has a very low, blunt nose.
+  // Pop-up headlight area is flat — this wedge has a very low, blunt nose.
   // Lower nose section: a thin slab at the front, lower than main body.
   const nose = MeshBuilder.CreateBox(
-    "f40.nose",
+    "retro.nose",
     { width: half.x * 1.85, height: visY * 0.85, depth: 0.6 },
     scene,
   );
@@ -360,20 +360,20 @@ function buildFerrariF40Visual(
 
   // Cockpit greenhouse — positioned in the middle, very small.
   const cabin = MeshBuilder.CreateBox(
-    "f40.cabin",
+    "retro.cabin",
     { width: half.x * 1.4, height: 0.40, depth: half.z * 0.55 },
     scene,
   );
   cabin.position.set(0, visY * 0.7 + 0.20, 0.05);
   cabin.parent = root;
-  const glassMat = materials.carDark.clone("f40.glass");
+  const glassMat = materials.carDark.clone("retro.glass");
   glassMat.emissiveColor.set(0.04, 0.05, 0.07);
   cabin.material = glassMat;
 
   // NACA-duct shoulders along the side — two narrow strakes.
   for (const sx of [-1, 1]) {
     const strake = MeshBuilder.CreateBox(
-      "f40.strake",
+      "retro.strake",
       { width: 0.05, height: 0.06, depth: half.z * 1.2 },
       scene,
     );
@@ -382,10 +382,10 @@ function buildFerrariF40Visual(
     strake.material = materials.carDark;
   }
 
-  // Engine cover slats at the rear (the F40's signature louvered deck).
+  // Engine cover slats at the rear.
   for (let i = 0; i < 5; i++) {
     const slat = MeshBuilder.CreateBox(
-      "f40.slat",
+      "retro.slat",
       { width: half.x * 1.4, height: 0.04, depth: 0.05 },
       scene,
     );
@@ -394,11 +394,11 @@ function buildFerrariF40Visual(
     slat.material = materials.carDark;
   }
 
-  // The iconic huge rear wing — wider, taller pylon-mounted than the 911.
+  // Huge rear wing — wide, tall, pylon-mounted.
   const wingY = visY * 0.95 + 0.45;
   const wingZ = -half.z + 0.05;
   const airfoil = MeshBuilder.CreateBox(
-    "f40.wing.airfoil",
+    "retro.wing.airfoil",
     { width: half.x * 1.95, height: 0.06, depth: 0.42 },
     scene,
   );
@@ -409,7 +409,7 @@ function buildFerrariF40Visual(
   // End plates on the wing — vertical fins at each tip.
   for (const sx of [-1, 1]) {
     const plate = MeshBuilder.CreateBox(
-      "f40.wing.endplate",
+      "retro.wing.endplate",
       { width: 0.04, height: 0.18, depth: 0.42 },
       scene,
     );
@@ -425,7 +425,7 @@ function buildFerrariF40Visual(
   const upH = upTop - upBot;
   for (const sx of [-1, 1]) {
     const upright = MeshBuilder.CreateBox(
-      "f40.wing.upright",
+      "retro.wing.upright",
       { width: 0.06, height: upH, depth: 0.10 },
       scene,
     );
@@ -435,13 +435,13 @@ function buildFerrariF40Visual(
   }
 
   // Headlights — small rectangles set into the wedge nose.
-  const hlMat = new StandardMaterial("f40.headlight", scene);
+  const hlMat = new StandardMaterial("retro.headlight", scene);
   hlMat.diffuseColor.set(0.92, 0.9, 0.78);
   hlMat.emissiveColor.set(0.15, 0.14, 0.10);
   hlMat.specularColor.set(0, 0, 0);
   for (const sx of [-1, 1]) {
     const hl = MeshBuilder.CreateBox(
-      "f40.hl",
+      "retro.hl",
       { width: 0.32, height: 0.06, depth: 0.04 },
       scene,
     );
@@ -451,9 +451,9 @@ function buildFerrariF40Visual(
   }
 }
 
-export const FERRARI_F40: CarSpec = {
-  id: "ferrari-f40",
-  label: "Ferrari F40",
+export const RETRO_WEDGE: CarSpec = {
+  id: "retro-wedge",
+  label: "Retro Wedge",
   description: "1100 kg • 478 PS twin-turbo V8 • raw, light, snappy.",
   chassisHalf: { x: 0.97, y: 0.15, z: 2.15 },
   bodyVisHalfY: 0.45,
@@ -467,14 +467,14 @@ export const FERRARI_F40: CarSpec = {
   suspensionStiffness: 32000,
   suspensionDamping: 6500,
 
-  // 478 PS in 1100 kg → much better p/w than the 911. Raw and quick.
+  // 478 PS in 1100 kg → strong power-to-weight. Raw and quick.
   maxSteer: 0.52,
   engineForce: 26000,
   brakeForce: 24000,
   handbrakeForce: 14000,
   rollingResistance: 0.008,
 
-  // F40 is famously twitchy — sharper turn-in (front grip), less rear grip.
+  // The retro wedge is twitchy — sharper turn-in, less rear grip.
   tireLatStiffness: 44,
   tireLatMaxMuFront: 1.20,    // more nose bite
   tireLatMaxMuRear: 0.98,     // tail lets go earlier
@@ -486,12 +486,12 @@ export const FERRARI_F40: CarSpec = {
   angularDamping: 0.40,        // less yaw damping → snappier
 
   bodyColor: new Color3(0.92, 0.13, 0.07), // Rosso Corsa
-  buildVisual: buildFerrariF40Visual,
+  buildVisual: buildRetroWedgeVisual,
 };
 
-// ── Lamborghini Huracán STO ───────────────────────────────────────────────
+// ── V10 Strada ────────────────────────────────────────────────────────────
 
-function buildLamborghiniHuracanVisual(
+function buildV10StradaVisual(
   root: TransformNode,
   scene: Scene,
   materials: Materials,
@@ -500,13 +500,13 @@ function buildLamborghiniHuracanVisual(
   const half = spec.chassisHalf;
   const visY = spec.bodyVisHalfY;
 
-  const bodyMat = makeMat("huracan.body.mat", scene, spec.bodyColor);
-  const carbonMat = makeMat("huracan.carbon.mat", scene, new Color3(0.08, 0.09, 0.10));
-  const stripeMat = makeMat("huracan.stripe.mat", scene, new Color3(0.05, 0.05, 0.06));
+  const bodyMat = makeMat("strada.body.mat", scene, spec.bodyColor);
+  const carbonMat = makeMat("strada.carbon.mat", scene, new Color3(0.08, 0.09, 0.10));
+  const stripeMat = makeMat("strada.stripe.mat", scene, new Color3(0.05, 0.05, 0.06));
 
   // Hexagonal wedge body — Lambo lines are all sharp creases.
   const bodyMesh = MeshBuilder.CreateBox(
-    "huracan.body",
+    "strada.body",
     { width: half.x * 2, height: visY * 1.3, depth: half.z * 2 },
     scene,
   );
@@ -515,7 +515,7 @@ function buildLamborghiniHuracanVisual(
 
   // Aggressively tapered nose — a thinner slab in front of the main body.
   const nose = MeshBuilder.CreateBox(
-    "huracan.nose",
+    "strada.nose",
     { width: half.x * 1.8, height: visY * 0.65, depth: 0.7 },
     scene,
   );
@@ -523,9 +523,9 @@ function buildLamborghiniHuracanVisual(
   nose.parent = root;
   nose.material = bodyMat;
 
-  // Centered black racing stripe on the hood / roof — STO signature.
+  // Centered black racing stripe on the hood / roof.
   const stripe = MeshBuilder.CreateBox(
-    "huracan.stripe",
+    "strada.stripe",
     { width: 0.55, height: 0.015, depth: half.z * 1.8 },
     scene,
   );
@@ -535,19 +535,19 @@ function buildLamborghiniHuracanVisual(
 
   // Wedge-shaped low cockpit pushed forward — mid-engine layout.
   const cabin = MeshBuilder.CreateBox(
-    "huracan.cabin",
+    "strada.cabin",
     { width: half.x * 1.45, height: 0.45, depth: half.z * 0.65 },
     scene,
   );
   cabin.position.set(0, visY * 0.75 + 0.22, 0.10);
   cabin.parent = root;
-  const glassMat = materials.carDark.clone("huracan.glass");
+  const glassMat = materials.carDark.clone("strada.glass");
   glassMat.emissiveColor.set(0.04, 0.05, 0.07);
   cabin.material = glassMat;
 
   // ── front splitter + canards ──
   const splitter = MeshBuilder.CreateBox(
-    "huracan.splitter",
+    "strada.splitter",
     { width: half.x * 2.05, height: 0.05, depth: 0.32 },
     scene,
   );
@@ -557,7 +557,7 @@ function buildLamborghiniHuracanVisual(
 
   for (const sx of [-1, 1]) {
     const canard = MeshBuilder.CreateBox(
-      "huracan.canard",
+      "strada.canard",
       { width: 0.34, height: 0.035, depth: 0.20 },
       scene,
     );
@@ -570,7 +570,7 @@ function buildLamborghiniHuracanVisual(
   // Slanted side intakes — two diagonal black slabs on each flank.
   for (const sx of [-1, 1]) {
     const intake = MeshBuilder.CreateBox(
-      "huracan.sideIntake",
+      "strada.sideIntake",
       { width: 0.08, height: 0.30, depth: 0.55 },
       scene,
     );
@@ -580,9 +580,9 @@ function buildLamborghiniHuracanVisual(
     intake.material = carbonMat;
   }
 
-  // Roof scoop pointing toward the rear (STO style snorkel).
+  // Roof scoop pointing toward the rear.
   const scoop = MeshBuilder.CreateBox(
-    "huracan.scoop",
+    "strada.scoop",
     { width: 0.35, height: 0.16, depth: 0.85 },
     scene,
   );
@@ -593,7 +593,7 @@ function buildLamborghiniHuracanVisual(
   // Rear deck lid louvres.
   for (let i = 0; i < 5; i++) {
     const slat = MeshBuilder.CreateBox(
-      "huracan.slat",
+      "strada.slat",
       { width: half.x * 1.5, height: 0.03, depth: 0.05 },
       scene,
     );
@@ -606,7 +606,7 @@ function buildLamborghiniHuracanVisual(
   const wingY = visY * 1.0 + 0.62;
   const wingZ = -half.z + 0.10;
   const airfoil = MeshBuilder.CreateBox(
-    "huracan.wing.airfoil",
+    "strada.wing.airfoil",
     { width: half.x * 1.92, height: 0.06, depth: 0.50 },
     scene,
   );
@@ -616,7 +616,7 @@ function buildLamborghiniHuracanVisual(
 
   for (const sx of [-1, 1]) {
     const plate = MeshBuilder.CreateBox(
-      "huracan.wing.endplate",
+      "strada.wing.endplate",
       { width: 0.04, height: 0.26, depth: 0.55 },
       scene,
     );
@@ -631,7 +631,7 @@ function buildLamborghiniHuracanVisual(
   const pylonH = pylonTop - pylonBot;
   for (const sx of [-1, 1]) {
     const pylon = MeshBuilder.CreateBox(
-      "huracan.wing.pylon",
+      "strada.wing.pylon",
       { width: 0.05, height: pylonH, depth: 0.10 },
       scene,
     );
@@ -642,7 +642,7 @@ function buildLamborghiniHuracanVisual(
 
   // Rear diffuser — wide and slanted, with two big strakes.
   const diffuser = MeshBuilder.CreateBox(
-    "huracan.diffuser",
+    "strada.diffuser",
     { width: half.x * 1.85, height: 0.06, depth: 0.4 },
     scene,
   );
@@ -651,7 +651,7 @@ function buildLamborghiniHuracanVisual(
   diffuser.material = carbonMat;
   for (const sx of [-1, 1]) {
     const strake = MeshBuilder.CreateBox(
-      "huracan.diffuserStrake",
+      "strada.diffuserStrake",
       { width: 0.05, height: 0.10, depth: 0.4 },
       scene,
     );
@@ -661,14 +661,14 @@ function buildLamborghiniHuracanVisual(
   }
 
   // Y-shaped LED headlights — two thin angled bars per side.
-  const hlMat = new StandardMaterial("huracan.headlight", scene);
+  const hlMat = new StandardMaterial("strada.headlight", scene);
   hlMat.diffuseColor.set(0.92, 0.94, 0.95);
   hlMat.emissiveColor.set(0.20, 0.22, 0.26);
   hlMat.specularColor.set(0, 0, 0);
   for (const sx of [-1, 1]) {
     for (let i = 0; i < 2; i++) {
       const hl = MeshBuilder.CreateBox(
-        "huracan.hl",
+        "strada.hl",
         { width: 0.10, height: 0.04, depth: 0.04 },
         scene,
       );
@@ -680,9 +680,9 @@ function buildLamborghiniHuracanVisual(
   }
 }
 
-export const LAMBORGHINI_HURACAN_STO: CarSpec = {
-  id: "lamborghini-huracan-sto",
-  label: "Lamborghini Huracán STO",
+export const V10_STRADA: CarSpec = {
+  id: "v10-strada",
+  label: "V10 Strada",
   description:
     "1340 kg • 640 PS NA V10 RWD • razor wedge, huge aero, hyper-quick turn-in.",
   chassisHalf: { x: 0.99, y: 0.15, z: 2.20 },
@@ -697,9 +697,8 @@ export const LAMBORGHINI_HURACAN_STO: CarSpec = {
   suspensionStiffness: 48000,
   suspensionDamping: 9200,
 
-  // 640 PS / 1340 kg — between the RS and F40 on power-to-weight.
-  // Steering even sharper than the GT3 RS, brakes the strongest of the
-  // three thanks to ceramic discs and downforce.
+  // 640 PS / 1340 kg — the strongest power-to-weight of the lineup.
+  // Steering is the sharpest of the three, with the strongest brakes.
   maxSteer: 0.60,
   engineForce: 30000,
   brakeForce: 38000,
@@ -707,7 +706,7 @@ export const LAMBORGHINI_HURACAN_STO: CarSpec = {
   rollingResistance: 0.011,
 
   // Front-biased aero: nose really bites, tail is willing to step out under
-  // throttle. Front mu higher than the GT3 RS; rear similar.
+  // throttle. Front mu is the highest; rear stays lively.
   tireLatStiffness: 64,
   tireLatMaxMuFront: 1.78,
   tireLatMaxMuRear: 1.58,
@@ -719,15 +718,15 @@ export const LAMBORGHINI_HURACAN_STO: CarSpec = {
   angularDamping: 0.72,        // even less yaw damping → very agile
 
   bodyColor: new Color3(0.96, 0.43, 0.07), // Arancio Borealis
-  buildVisual: buildLamborghiniHuracanVisual,
+  buildVisual: buildV10StradaVisual,
 };
 
 // ── registry ──────────────────────────────────────────────────────────────
 
 export const CARS: ReadonlyArray<CarSpec> = [
-  PORSCHE_911_GT3_RS,
-  FERRARI_F40,
-  LAMBORGHINI_HURACAN_STO,
+  APEX_RS,
+  RETRO_WEDGE,
+  V10_STRADA,
 ];
 
 export function findCar(id: string): CarSpec | undefined {

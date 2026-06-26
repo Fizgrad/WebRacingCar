@@ -1,7 +1,7 @@
 /**
  * Procedural engine sound using the Web Audio API.
  *
- * Simulates a flat-six (Porsche) engine: fundamental + harmonics modulated
+ * Simulates a high-revving flat-six-style engine: fundamental + harmonics modulated
  * by speed (RPM) and throttle. No external audio files.
  */
 export class EngineAudio {

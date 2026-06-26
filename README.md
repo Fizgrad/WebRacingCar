@@ -7,9 +7,9 @@ Minimalist 3D browser racing simulator built with **Babylon.js**, **Vite**, **Ty
 - Low-poly minimalist 3D visuals
 - Raycast-suspension vehicle physics
 - Selectable cars:
-  - Porsche 911 GT3 RS (992)
-  - Ferrari F40
-  - Lamborghini Huracán STO
+  - Apex RS
+  - Retro Wedge
+  - V10 Strada
 - Built-in tracks:
   - Infinite Straight
   - Speedway Oval
