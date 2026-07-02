@@ -14,7 +14,7 @@ Minimalist 3D browser racing simulator built with **Babylon.js**, **Vite**, **Ty
   - Infinite Straight
   - Speedway Oval
   - Endless Highway
-- Custom track drawing mode
+- Custom track keypoint editor
 - Procedural endless track streaming
 - Car-centered speed-scaling minimap
 - Procedural engine and tire-slip audio
@@ -66,8 +66,8 @@ npm run typecheck && npm run lint && npm run build
 - `Space`: handbrake
 - `R`: reset to start
 - `T`: back to menu
-- `Enter`: build custom drawn track
-- `Esc`: leave track drawing mode
+- `Enter`: start driving from custom track editor
+- `Esc`: leave track editor
 
 ### Mobile
 
@@ -80,7 +80,16 @@ For Android/Samsung device orientation, test through a secure context. `http://<
 
 ## Custom Track Mode
 
-Choose **Custom — Draw Your Own**, then draw a path from the top-down view. The game smooths the path, lowers sharp curvature, builds a road ribbon, and creates a Rapier trimesh collider.
+Choose **Custom — Draw Your Own** to open the top-down keypoint editor.
+
+- Click empty ground to add key points.
+- Drag existing points to reshape the route.
+- Green point = start, red point = end, blue points = intermediate controls.
+- Use the curve smoothness slider to move between straighter connections and smoother arc-like bends.
+- Use the mouse wheel to zoom; the side panel shows the approximate view scale.
+- Click **Start driving** or press `Enter` when the route is ready.
+
+The final path is still processed by the track builder: high-curvature regions are smoothed, unsafe corners are rounded, the road ribbon is generated from centerline normals, and Rapier trimesh colliders are created.
 
 ## Project Layout
 

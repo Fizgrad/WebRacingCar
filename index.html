@@ -84,6 +84,34 @@
         font-size: 12px;
         margin-top: 10px;
       }
+      #designPanel {
+        position: fixed;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 220px;
+        background: rgba(255,255,255,0.92);
+        color: #1f2933;
+        padding: 14px;
+        border-radius: 12px;
+        box-shadow: 0 10px 28px rgba(20, 30, 40, 0.18);
+        font-size: 13px;
+        display: none;
+      }
+      #designPanel.visible { display: block; }
+      #designPanel label { display: block; margin: 10px 0 4px; color: #5a6470; }
+      #designPanel input { width: 100%; }
+      #designPanel button {
+        width: 100%;
+        margin-top: 9px;
+        padding: 10px 12px;
+        border: 1px solid #d5dae0;
+        border-radius: 8px;
+        background: #f5f7fa;
+        font: inherit;
+      }
+      #designPanel .primary { background: #2f6df0; color: white; border-color: #2f6df0; }
+      #designPanel .hint { margin-top: 8px; color: #5a6470; font-size: 11px; line-height: 1.45; }
       #menu {
         position: fixed;
         left: 50%;
@@ -253,18 +281,25 @@
       <canvas id="renderCanvas"></canvas>
       <div id="hud"></div>
       <div id="designHint">
-        <h2>Draw your rally track</h2>
+        <h2>Build your rally track</h2>
         <ol>
-          <li>Press and hold the <span class="key">left mouse button</span> on the ground.</li>
-          <li>Drag to sketch the path your car will follow. Smooth, flowing curves drive best.</li>
-          <li>Release the mouse when you reach the finish line.</li>
+          <li>Click empty ground to add key points.</li>
+          <li>Drag blue/red/green points to reshape the track.</li>
+          <li>Use the side panel to adjust curve smoothness.</li>
         </ol>
         <p>
-          Press <span class="key">Enter</span> to build the track and start driving.<br />
-          Use the <span class="key">mouse wheel</span> to zoom the top-down view.<br />
-          Drawing again will replace your previous path.
+          Press <span class="key">Enter</span> or click <span class="key">Start</span> to drive.<br />
+          Use the <span class="key">mouse wheel</span> to zoom the top-down view.
         </p>
-        <p class="muted">Tip: keep curves wide. Tight hairpins are hard to take at speed.</p>
+        <p class="muted">Green = start, red = end. More points give better control over straight and arc sections.</p>
+      </div>
+      <div id="designPanel">
+        <strong>Track editor</strong>
+        <label for="curveSlider">Curve smoothness</label>
+        <input id="curveSlider" type="range" min="0" max="100" value="65" />
+        <button id="clearTrackBtn">Clear points</button>
+        <button id="startTrackBtn" class="primary">Start driving</button>
+        <div id="designStats" class="hint">0 points · view 400 m</div>
       </div>
       <div id="menu"></div>
       <div id="mobileControls">

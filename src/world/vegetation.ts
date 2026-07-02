@@ -43,6 +43,7 @@ const COUNTS = {
 
 export interface Vegetation {
   root: TransformNode;
+  updateLOD(carPos: { x: number; z: number }): void;
   dispose(): void;
 }
 
@@ -60,10 +61,18 @@ export function buildVegetation(
   }
 
   const instances: InstancedMesh[] = [];
-  const track = (m: InstancedMesh) => { instances.push(m); m.parent = root; };
+  const lodItems: Array<{ mesh: InstancedMesh; maxD2: number }> = [];
+  const density = isLowPowerDevice() ? 0.45 : 1;
+  const count = (v: number): number => Math.max(1, Math.round(v * density));
+  const track = (m: InstancedMesh, maxDistance: number = 520) => {
+    instances.push(m);
+    m.parent = root;
+    m.freezeWorldMatrix();
+    lodItems.push({ mesh: m, maxD2: maxDistance * maxDistance });
+  };
 
   // ── Pine trees (cone + trunk) ─────────────────────────────────────────
-  scatter(COUNTS.pineTrees, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.pineTrees), rng, centerline, spawn, (x, z) => {
     const s = 0.9 + rng() * 0.9;
     const yaw = rng() * Math.PI * 2;
     const trunk = proto.pineTrunk.createInstance(`veg.ptrunk.${instances.length}`);
@@ -84,7 +93,7 @@ export function buildVegetation(
   });
 
   // ── Round/deciduous trees (trunk + foliage sphere) ────────────────────
-  scatter(COUNTS.roundTrees, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.roundTrees), rng, centerline, spawn, (x, z) => {
     const s = 1.0 + rng() * 0.7;
     const yaw = rng() * Math.PI * 2;
     const trunk = proto.trunk.createInstance(`veg.trunk.${instances.length}`);
@@ -107,7 +116,7 @@ export function buildVegetation(
   });
 
   // ── Bushes ────────────────────────────────────────────────────────────
-  scatter(COUNTS.bushes, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.bushes), rng, centerline, spawn, (x, z) => {
     const s = 0.6 + rng() * 0.7;
     const inst = proto.bush.createInstance(`veg.bush.${instances.length}`);
     inst.position.set(x, 0.25 * s, z);
@@ -117,22 +126,22 @@ export function buildVegetation(
   });
 
   // ── Grass tufts ───────────────────────────────────────────────────────
-  scatter(COUNTS.grass, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.grass), rng, centerline, spawn, (x, z) => {
     const s = 0.5 + rng() * 0.6;
     const inst = proto.grass.createInstance(`veg.grass.${instances.length}`);
     inst.position.set(x, 0.18 * s, z);
     inst.scaling.set(s, s, s);
     inst.rotation.y = rng() * Math.PI * 2;
-    track(inst);
+    track(inst, 160);
   });
 
   // ── Flowers (3 colors) ────────────────────────────────────────────────
-  scatter(COUNTS.flowers, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.flowers), rng, centerline, spawn, (x, z) => {
     const s = 0.6 + rng() * 0.4;
     const stem = proto.flowerStem.createInstance(`veg.fstem.${instances.length}`);
     stem.position.set(x, 0.18 * s, z);
     stem.scaling.set(s, s, s);
-    track(stem);
+    track(stem, 180);
 
     const choice = Math.floor(rng() * 3);
     const head = (
@@ -142,11 +151,11 @@ export function buildVegetation(
     ).createInstance(`veg.fhead.${instances.length}`);
     head.position.set(x, 0.36 * s, z);
     head.scaling.set(s, s, s);
-    track(head);
+    track(head, 180);
   });
 
   // ── Small rocks ──────────────────────────────────────────────────────
-  scatter(COUNTS.rocks, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.rocks), rng, centerline, spawn, (x, z) => {
     const s = 0.3 + rng() * 0.5;
     const inst = proto.rock.createInstance(`veg.rock.${instances.length}`);
     inst.position.set(x, 0.18 * s, z);
@@ -156,7 +165,7 @@ export function buildVegetation(
   });
 
   // ── Boulders (larger, more clearance) ────────────────────────────────
-  scatter(COUNTS.boulders, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.boulders), rng, centerline, spawn, (x, z) => {
     const s = 1.2 + rng() * 1.4;
     const inst = proto.boulder.createInstance(`veg.boulder.${instances.length}`);
     inst.position.set(x, 0.5 * s, z);
@@ -166,7 +175,7 @@ export function buildVegetation(
   }, /*clearance*/ 14);
 
   // ── Oil barrels (clusters of 1–3 near the track) ─────────────────────
-  scatter(COUNTS.barrels, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.barrels), rng, centerline, spawn, (x, z) => {
     const groupSize = 1 + Math.floor(rng() * 3);
     for (let i = 0; i < groupSize; i++) {
       const inst = proto.barrel.createInstance(`veg.barrel.${instances.length}`);
@@ -179,7 +188,7 @@ export function buildVegetation(
   }, /*clearance*/ 10);
 
   // ── Roadside signs (chevron arrows pointing along the road) ──────────
-  scatter(COUNTS.signs, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.signs), rng, centerline, spawn, (x, z) => {
     // Aim the sign roughly tangent to the nearest segment.
     const { tx, tz } = nearestTangent(x, z, centerline);
     const post = proto.signPost.createInstance(`veg.signpost.${instances.length}`);
@@ -192,7 +201,7 @@ export function buildVegetation(
   }, /*clearance*/ 9);
 
   // ── Big billboards (rare) ────────────────────────────────────────────
-  scatter(COUNTS.billboards, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.billboards), rng, centerline, spawn, (x, z) => {
     const { tx, tz } = nearestTangent(x, z, centerline);
     for (const sx of [-1, 1]) {
       const leg = proto.bbLeg.createInstance(`veg.bbleg.${instances.length}`);
@@ -206,14 +215,14 @@ export function buildVegetation(
   }, /*clearance*/ 18);
 
   // ── Hay bales (cylinders on their side) ──────────────────────────────
-  scatter(COUNTS.haybales, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.haybales), rng, centerline, spawn, (x, z) => {
     const inst = proto.hayBale.createInstance(`veg.hay.${instances.length}`);
     inst.position.set(x, 0.45, z);
     inst.rotation.y = rng() * Math.PI * 2;
     track(inst);
   }, /*clearance*/ 9);
 
-  scatter(COUNTS.houses, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.houses), rng, centerline, spawn, (x, z) => {
     const yaw = rng() * Math.PI * 2;
     const sx = 1.0 + rng() * 0.6;
     const sz = 0.9 + rng() * 0.5;
@@ -229,7 +238,7 @@ export function buildVegetation(
     track(roof);
   }, 26);
 
-  scatter(COUNTS.warehouses, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.warehouses), rng, centerline, spawn, (x, z) => {
     const yaw = rng() * Math.PI * 2;
     const inst = proto.warehouse.createInstance(`veg.warehouse.${instances.length}`);
     inst.position.set(x, 1.6, z);
@@ -238,7 +247,7 @@ export function buildVegetation(
     track(inst);
   }, 36);
 
-  scatter(COUNTS.towers, rng, centerline, spawn, (x, z) => {
+  scatter(count(COUNTS.towers), rng, centerline, spawn, (x, z) => {
     const yaw = rng() * Math.PI * 2;
     const base = proto.towerBase.createInstance(`veg.tower.${instances.length}`);
     base.position.set(x, 2.2, z);
@@ -268,6 +277,13 @@ export function buildVegetation(
 
   return {
     root,
+    updateLOD(carPos): void {
+      for (const item of lodItems) {
+        const dx = item.mesh.position.x - carPos.x;
+        const dz = item.mesh.position.z - carPos.z;
+        item.mesh.isVisible = dx * dx + dz * dz <= item.maxD2;
+      }
+    },
     dispose(): void {
       const mats = collectMaterials(Object.values(proto));
       root.dispose(false, true);
@@ -503,6 +519,10 @@ function nearestTangent(x: number, z: number, line: ReadonlyArray<Vec2>): { tx: 
   const dx = b.x - a.x, dz = b.z - a.z;
   const ln = Math.hypot(dx, dz) || 1;
   return { tx: dx / ln, tz: dz / ln };
+}
+
+function isLowPowerDevice(): boolean {
+  return typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
 }
 
 function collectMaterials(values: ReadonlyArray<unknown>): Set<StandardMaterial> {

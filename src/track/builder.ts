@@ -67,12 +67,17 @@ export function buildPlayerTrack(
   ctx: RenderContext,
   phys: PhysicsWorld,
   drawn: ReadonlyArray<Vec2>,
-  opts?: { walls?: boolean },
+  opts?: { walls?: boolean; closed?: boolean },
 ): BuiltTrack | null {
   if (drawn.length < 2) return null;
 
+  const source = opts?.closed && distance2(drawn[0], drawn[drawn.length - 1]) < 1e-6
+    ? drawn.slice(0, -1)
+    : drawn;
+  if (source.length < 2) return null;
+
   // 1. Clean input.
-  const cleaned = dedupe(drawn, MIN_INPUT_STEP);
+  const cleaned = dedupe(source, MIN_INPUT_STEP);
   if (cleaned.length < 2) return null;
 
   // 2. Before corner-rounding: adaptive edge-length-weighted smoothing that
@@ -94,7 +99,10 @@ export function buildPlayerTrack(
   // 4. Final low-pass: a few Laplacian passes wipe out residual jitter from
   //    the hand-drawn path while leaving large-scale shape intact (endpoints
   //    are pinned).
-  const centerline = laplacianSmooth(resampled, SMOOTH_LAMBDA, SMOOTH_ITERS);
+  const centerlineRaw = laplacianSmooth(resampled, SMOOTH_LAMBDA, SMOOTH_ITERS);
+  const centerline = opts?.closed && centerlineRaw.length > 2 && distance2(centerlineRaw[0], centerlineRaw[centerlineRaw.length - 1]) < 1e-4
+    ? centerlineRaw.slice(0, -1)
+    : centerlineRaw;
 
   const { scene, materials } = ctx;
   const { world, rapier } = phys;
@@ -123,6 +131,7 @@ export function buildPlayerTrack(
   const half = ROAD_WIDTH / 2;
   const halfEdge = EDGE_WIDTH / 2;
   const n = centerline.length;
+  const segmentCount = opts?.closed ? n : n - 1;
 
   // Each entry = { leftX, leftZ, rightX, rightZ } for one centerline point.
   interface RibbonRow { lx: number; lz: number; rx: number; rz: number }
@@ -146,8 +155,9 @@ export function buildPlayerTrack(
     roadPos.push(r.lx, ROAD_Y, r.lz);
     roadPos.push(r.rx, ROAD_Y, r.rz);
   }
-  for (let i = 0; i < n - 1; i++) {
-    const a = i * 2, b = i * 2 + 1, c = (i + 1) * 2, d = (i + 1) * 2 + 1;
+  for (let i = 0; i < segmentCount; i++) {
+    const ni = (i + 1) % n;
+    const a = i * 2, b = i * 2 + 1, c = ni * 2, d = ni * 2 + 1;
     roadIdx.push(a, c, b, b, c, d);
   }
   const roadMesh = buildMesh("track.road", scene, roadPos, roadIdx, materials.road, -1);
@@ -168,10 +178,12 @@ export function buildPlayerTrack(
       r.rx - nx * halfEdge, EDGE_Y, r.rz - nz * halfEdge,
     );
   }
-  for (let i = 0; i < n - 1; i++) {
+  for (let i = 0; i < segmentCount; i++) {
+    const ni = (i + 1) % n;
     const s = i * 4;
-    edgeIdx.push(s, s + 4, s + 1, s + 1, s + 4, s + 5);     // left edge
-    edgeIdx.push(s + 2, s + 6, s + 3, s + 3, s + 6, s + 7); // right edge
+    const ns = ni * 4;
+    edgeIdx.push(s, ns, s + 1, s + 1, ns, ns + 1);     // left edge
+    edgeIdx.push(s + 2, ns + 2, s + 3, s + 3, ns + 2, ns + 3); // right edge
   }
   const edgeMesh = buildMesh("track.edge", scene, edgePos, edgeIdx, materials.roadEdge, -3);
   edgeMesh.parent = root;
@@ -252,8 +264,9 @@ export function buildPlayerTrack(
         wPos.push(ex, 0.02, ez);
         wPos.push(ex, wallHeight, ez);
       }
-      for (let i = 0; i < n - 1; i++) {
-        const a = i * 2, b = i * 2 + 1, c2 = (i + 1) * 2, d = (i + 1) * 2 + 1;
+      for (let i = 0; i < segmentCount; i++) {
+        const ni = (i + 1) % n;
+        const a = i * 2, b = i * 2 + 1, c2 = ni * 2, d = ni * 2 + 1;
         wIdx.push(a, b, c2, b, d, c2);
       }
       const wallMat = materials.roadEdge.clone(`track.wall.${side}.mat`);
@@ -430,6 +443,7 @@ export interface TrackPreset {
   description: string;
   polyline(): Vec2[];
   walls?: boolean;
+  closed?: boolean;
 }
 
 export const PRESETS: ReadonlyArray<TrackPreset> = [
@@ -451,12 +465,13 @@ export const PRESETS: ReadonlyArray<TrackPreset> = [
     description:
       "1.6 km elliptical speedway: smooth oval banking, two long sweeping straights. Walled inside and out.",
     walls: true,
+    closed: true,
     polyline(): Vec2[] {
       const a = 240; // semi-major (along Z)
       const b = 150; // semi-minor (along X)
       const samples = 220;
       const pts: Vec2[] = [];
-      for (let i = 0; i <= samples; i++) {
+      for (let i = 0; i < samples; i++) {
         const t = (i / samples) * Math.PI * 2;
         pts.push({ x: Math.sin(t) * b, z: Math.cos(t) * a });
       }
@@ -477,7 +492,13 @@ export function buildPresetTrack(
 ): BuiltTrack | null {
   const preset = findPreset(presetId);
   if (!preset) return null;
-  return buildPlayerTrack(ctx, phys, preset.polyline(), { walls: preset.walls });
+  return buildPlayerTrack(ctx, phys, preset.polyline(), { walls: preset.walls, closed: preset.closed });
+}
+
+function distance2(a: Vec2, b: Vec2): number {
+  const dx = a.x - b.x;
+  const dz = a.z - b.z;
+  return dx * dx + dz * dz;
 }
 
 function polylineLength(points: ReadonlyArray<Vec2>): number {

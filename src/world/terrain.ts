@@ -24,6 +24,7 @@ const COUNTS = {
 
 export interface TerrainFeatures {
   root: TransformNode;
+  updateLOD(carPos: { x: number; z: number }): void;
   dispose(): void;
 }
 
@@ -40,9 +41,17 @@ export function buildTerrainFeatures(
   }
 
   const instances: InstancedMesh[] = [];
-  const add = (m: InstancedMesh) => { m.parent = root; instances.push(m); };
+  const lodItems: Array<{ mesh: InstancedMesh; maxD2: number }> = [];
+  const density = isLowPowerDevice() ? 0.55 : 1;
+  const count = (v: number): number => Math.max(1, Math.round(v * density));
+  const add = (m: InstancedMesh, maxDistance: number = 560) => {
+    m.parent = root;
+    m.freezeWorldMatrix();
+    instances.push(m);
+    lodItems.push({ mesh: m, maxD2: maxDistance * maxDistance });
+  };
 
-  scatter(COUNTS.meadowPatches, rng, centerline, spawn, 8, (x, z) => {
+  scatter(count(COUNTS.meadowPatches), rng, centerline, spawn, 8, (x, z) => {
     const s = 8 + rng() * 18;
     const inst = proto.meadow.createInstance(`terrain.meadow.${instances.length}`);
     inst.position.set(x, 0.012, z);
@@ -51,7 +60,7 @@ export function buildTerrainFeatures(
     add(inst);
   });
 
-  scatter(COUNTS.dirtPatches, rng, centerline, spawn, 14, (x, z) => {
+  scatter(count(COUNTS.dirtPatches), rng, centerline, spawn, 14, (x, z) => {
     const s = 6 + rng() * 18;
     const inst = proto.dirt.createInstance(`terrain.dirt.${instances.length}`);
     inst.position.set(x, 0.014, z);
@@ -60,7 +69,7 @@ export function buildTerrainFeatures(
     add(inst);
   });
 
-  scatter(COUNTS.sandPatches, rng, centerline, spawn, 16, (x, z) => {
+  scatter(count(COUNTS.sandPatches), rng, centerline, spawn, 16, (x, z) => {
     const s = 5 + rng() * 14;
     const inst = proto.sand.createInstance(`terrain.sand.${instances.length}`);
     inst.position.set(x, 0.016, z);
@@ -69,7 +78,7 @@ export function buildTerrainFeatures(
     add(inst);
   });
 
-  scatter(COUNTS.ponds, rng, centerline, spawn, 30, (x, z) => {
+  scatter(count(COUNTS.ponds), rng, centerline, spawn, 30, (x, z) => {
     const s = 5 + rng() * 12;
     const inst = proto.pond.createInstance(`terrain.pond.${instances.length}`);
     inst.position.set(x, 0.018, z);
@@ -78,7 +87,7 @@ export function buildTerrainFeatures(
     add(inst);
   });
 
-  scatter(COUNTS.hills, rng, centerline, spawn, 24, (x, z) => {
+  scatter(count(COUNTS.hills), rng, centerline, spawn, 24, (x, z) => {
     const s = 5 + rng() * 18;
     const inst = proto.hill.createInstance(`terrain.hill.${instances.length}`);
     inst.position.set(x, 0.25 + s * 0.045, z);
@@ -87,7 +96,7 @@ export function buildTerrainFeatures(
     add(inst);
   });
 
-  scatter(COUNTS.rockFields, rng, centerline, spawn, 22, (x, z) => {
+  scatter(count(COUNTS.rockFields), rng, centerline, spawn, 22, (x, z) => {
     const cluster = 4 + Math.floor(rng() * 7);
     for (let i = 0; i < cluster; i++) {
       const ox = (rng() - 0.5) * 10;
@@ -103,6 +112,13 @@ export function buildTerrainFeatures(
 
   return {
     root,
+    updateLOD(carPos): void {
+      for (const item of lodItems) {
+        const dx = item.mesh.position.x - carPos.x;
+        const dz = item.mesh.position.z - carPos.z;
+        item.mesh.isVisible = dx * dx + dz * dz <= item.maxD2;
+      }
+    },
     dispose(): void {
       const mats = collectMaterials(Object.values(proto));
       root.dispose(false, true);
@@ -210,6 +226,10 @@ function distToCenterline(x: number, z: number, line: ReadonlyArray<Vec2>): numb
     if (d2 < best) best = d2;
   }
   return Math.sqrt(best);
+}
+
+function isLowPowerDevice(): boolean {
+  return typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
 }
 
 function collectMaterials(values: ReadonlyArray<unknown>): Set<StandardMaterial> {

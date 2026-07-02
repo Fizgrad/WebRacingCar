@@ -26,6 +26,11 @@ import { createCarPreview, type CarPreview } from "./game/carPreview";
 const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement | null;
 const hud = document.getElementById("hud");
 const designHint = document.getElementById("designHint");
+const designPanel = document.getElementById("designPanel");
+const curveSlider = document.getElementById("curveSlider") as HTMLInputElement | null;
+const clearTrackBtn = document.getElementById("clearTrackBtn");
+const startTrackBtn = document.getElementById("startTrackBtn");
+const designStats = document.getElementById("designStats");
 const menuEl = document.getElementById("menu");
 const appRoot = document.getElementById("app");
 if (!canvas) throw new Error("renderCanvas not found");
@@ -171,6 +176,7 @@ function showMenu(): void {
   if (endlessProps) { endlessProps.dispose(); endlessProps = null; }
   designer.deactivate();
   designHint?.classList.remove("visible");
+  designPanel?.classList.remove("visible");
   minimap.hide();
   setMobilePedalsVisible(false);
   menuStep = "car";
@@ -200,6 +206,8 @@ function enterDesignMode(): void {
   designer.clear();
   designer.activate();
   designHint?.classList.add("visible");
+  designPanel?.classList.add("visible");
+  updateDesignStats();
   minimap.hide();
   setMobilePedalsVisible(false);
   menuEl!.classList.remove("visible");
@@ -223,6 +231,7 @@ function startDrive(built: BuiltTrack): void {
   ctx.scene.activeCamera = followCam.camera;
   mode = "drive";
   designHint?.classList.remove("visible");
+  designPanel?.classList.remove("visible");
   menuEl!.classList.remove("visible");
   minimap.setCenterline(built.centerline);
   minimap.show();
@@ -260,6 +269,7 @@ function enterDriveModeEndless(): void {
   ctx.scene.activeCamera = followCam.camera;
   mode = "drive";
   designHint?.classList.remove("visible");
+  designPanel?.classList.remove("visible");
   menuEl!.classList.remove("visible");
   minimap.setCenterline(endless.centerline);
   minimap.show();
@@ -267,6 +277,27 @@ function enterDriveModeEndless(): void {
 }
 
 // ── input wiring ──────────────────────────────────────────────────────────
+
+function updateDesignStats(): void {
+  if (!designStats) return;
+  designStats.textContent = `${designer.keyPointCount()} points · ${designer.scaleText()}`;
+}
+
+const onCurveInput = (): void => {
+  const value = Number(curveSlider?.value ?? 65) / 100;
+  designer.setCurve(value);
+  updateDesignStats();
+};
+const onClearTrack = (): void => {
+  designer.clear();
+  updateDesignStats();
+};
+const onStartTrack = (): void => {
+  if (mode === "design" && designer.hasUsableStroke()) enterDriveModeFromDesigner();
+};
+curveSlider?.addEventListener("input", onCurveInput);
+clearTrackBtn?.addEventListener("click", onClearTrack);
+startTrackBtn?.addEventListener("click", onStartTrack);
 
 const onGlobalKeyDown = (e: KeyboardEvent): void => {
   if (e.code === "Enter") {
@@ -327,6 +358,11 @@ ctx.engine.runRenderLoop(() => {
     // Keep the ground tile centred under the car so the world feels infinite.
     ground.follow({ x: pos.x, z: pos.z });
 
+    if (frameCounter % 15 === 0) {
+      vegetation?.updateLOD({ x: pos.x, z: pos.z });
+      terrainFeatures?.updateLOD({ x: pos.x, z: pos.z });
+    }
+
     // Endless mode: stream more chunks ahead, recycle behind.
     if (endless) {
       endless.update({ x: pos.x, z: pos.z });
@@ -338,6 +374,7 @@ ctx.engine.runRenderLoop(() => {
     }
   } else {
     input.consumeReset();
+    if (mode === "design" && frameCounter % 10 === 0) updateDesignStats();
   }
 
   ctx.scene.render();
@@ -347,10 +384,11 @@ ctx.engine.runRenderLoop(() => {
       hud.textContent = "";
     } else if (mode === "design") {
       hud.textContent =
-        `DRAW TRACK\n` +
-        `Click + drag           draw a path\n` +
+        `TRACK EDITOR\n` +
+        `Click empty ground     add key point\n` +
+        `Drag point             adjust point\n` +
         `Mouse wheel            zoom\n` +
-        `Enter                  start driving\n` +
+        `Enter / Start          drive\n` +
         `Esc                    back to menu`;
     } else if (vehicle) {
       const speed = vehicle.speedKmh().toFixed(0).padStart(3, " ");
@@ -376,6 +414,9 @@ if (import.meta.hot) {
     window.removeEventListener("pointerdown", onFirstPointerDown);
     btnMenu?.removeEventListener("click", onMobileMenuClick);
     motionGateBtn?.removeEventListener("click", onMotionGateClick);
+    curveSlider?.removeEventListener("input", onCurveInput);
+    clearTrackBtn?.removeEventListener("click", onClearTrack);
+    startTrackBtn?.removeEventListener("click", onStartTrack);
     for (const p of carPreviews) p.dispose();
     carPreviews = [];
     input.dispose();
