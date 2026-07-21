@@ -26,6 +26,8 @@ export class TrackDesigner {
   private active = false;
   private draggingIndex: number | null = null;
   private curve = 0.65;
+  private closed = false;
+  private segmentMode: "curve" | "line" = "curve";
 
   private static readonly GROUND_PLANE = Plane.FromPositionAndNormal(
     new Vector3(0, 0, 0),
@@ -57,14 +59,7 @@ export class TrackDesigner {
     this.active = true;
     this.prevCamera = this.scene.activeCamera;
 
-    const cam = new ArcRotateCamera(
-      "designer.cam",
-      -Math.PI / 2,
-      0.001,
-      200,
-      new Vector3(0, 0, 0),
-      this.scene,
-    );
+    const cam = new ArcRotateCamera("designer.cam", -Math.PI / 2, 0.001, 200, new Vector3(0, 0, 0), this.scene);
     cam.minZ = 0.1;
     cam.maxZ = 2000;
     cam.upperBetaLimit = 0.05;
@@ -116,6 +111,20 @@ export class TrackDesigner {
     this.rebuildPreview();
   }
 
+  setClosed(value: boolean): void {
+    this.closed = value;
+    this.rebuildPreview();
+  }
+
+  setSegmentMode(value: "curve" | "line"): void {
+    this.segmentMode = value;
+    this.rebuildPreview();
+  }
+
+  isClosed(): boolean {
+    return this.closed && this.points.length >= 3;
+  }
+
   keyPointCount(): number {
     return this.points.length;
   }
@@ -123,6 +132,14 @@ export class TrackDesigner {
   scaleText(): string {
     const r = this.camera?.radius ?? 200;
     return `view ${(r * 2).toFixed(0)} m`;
+  }
+
+  statsText(): string {
+    const path = this.buildPath();
+    const len = pathLength(path);
+    const minR = minTurnRadius(path);
+    const warning = minR < 18 && path.length >= 3 ? ` · narrow turn ${minR.toFixed(0)} m` : "";
+    return `${this.points.length} points · ${this.segmentMode}${this.isClosed() ? " · closed" : ""} · ${len.toFixed(0)} m${warning} · ${this.scaleText()}`;
   }
 
   private onDown = (ev: PointerEvent): void => {
@@ -186,10 +203,11 @@ export class TrackDesigner {
   }
 
   private buildPath(): Vec2[] {
-    if (this.points.length < 3 || this.curve <= 0.02) {
-      return this.points.map((p) => ({ x: p.x, z: p.z }));
+    const controls = this.isClosed() ? [...this.points, this.points[0]] : this.points;
+    if (controls.length < 3 || this.curve <= 0.02 || this.segmentMode === "line") {
+      return controls.map((p) => ({ x: p.x, z: p.z }));
     }
-    const sampled = catmullRom(this.points, 10 + Math.round(this.curve * 18));
+    const sampled = catmullRom(controls, 10 + Math.round(this.curve * 18));
     const step = Math.max(0.8, 4 - this.curve * 3);
     const resampled = resampleByArcLength(sampled, step);
     return laplacianSmooth(resampled, this.curve * 0.35, Math.round(2 + this.curve * 6));
@@ -244,4 +262,29 @@ export class TrackDesigner {
     this.markerEndMat.dispose();
     void this.engine;
   }
+}
+
+function pathLength(points: ReadonlyArray<Vec2>): number {
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    total += Math.hypot(points[i].x - points[i - 1].x, points[i].z - points[i - 1].z);
+  }
+  return total;
+}
+
+function minTurnRadius(points: ReadonlyArray<Vec2>): number {
+  let best = Infinity;
+  for (let i = 1; i < points.length - 1; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    const c = points[i + 1];
+    const ab = Math.hypot(b.x - a.x, b.z - a.z);
+    const bc = Math.hypot(c.x - b.x, c.z - b.z);
+    const ac = Math.hypot(c.x - a.x, c.z - a.z);
+    const area2 = Math.abs((b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x));
+    if (area2 < 1e-4) continue;
+    const r = (ab * bc * ac) / (2 * area2);
+    if (r < best) best = r;
+  }
+  return Number.isFinite(best) ? best : Infinity;
 }

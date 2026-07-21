@@ -100,7 +100,7 @@
       }
       #designPanel.visible { display: block; }
       #designPanel label { display: block; margin: 10px 0 4px; color: #5a6470; }
-      #designPanel input { width: 100%; }
+      #designPanel input, #designPanel select { width: 100%; }
       #designPanel button {
         width: 100%;
         margin-top: 9px;
@@ -297,6 +297,13 @@
         <strong>Track editor</strong>
         <label for="curveSlider">Curve smoothness</label>
         <input id="curveSlider" type="range" min="0" max="100" value="65" />
+        <label for="segmentMode">Segment mode</label>
+        <select id="segmentMode">
+          <option value="curve">Arc / smooth</option>
+          <option value="line">Straight</option>
+        </select>
+        <label><input id="closedTrackToggle" type="checkbox" /> Closed loop</label>
+        <label><input id="editorHintToggle" type="checkbox" checked /> Show center help</label>
         <button id="clearTrackBtn">Clear points</button>
         <button id="startTrackBtn" class="primary">Start driving</button>
         <div id="designStats" class="hint">0 points · view 400 m</div>

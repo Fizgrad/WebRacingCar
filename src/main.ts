@@ -22,12 +22,17 @@ import { FollowCamera } from "./game/camera";
 import { Minimap } from "./game/minimap";
 import { EngineAudio, TireScreech } from "./game/audio";
 import { createCarPreview, type CarPreview } from "./game/carPreview";
+import { RaceTimer, formatLap } from "./game/race";
+import { TireEffects } from "./game/tireEffects";
 
 const canvas = document.getElementById("renderCanvas") as HTMLCanvasElement | null;
 const hud = document.getElementById("hud");
 const designHint = document.getElementById("designHint");
 const designPanel = document.getElementById("designPanel");
 const curveSlider = document.getElementById("curveSlider") as HTMLInputElement | null;
+const segmentMode = document.getElementById("segmentMode") as HTMLSelectElement | null;
+const closedTrackToggle = document.getElementById("closedTrackToggle") as HTMLInputElement | null;
+const editorHintToggle = document.getElementById("editorHintToggle") as HTMLInputElement | null;
 const clearTrackBtn = document.getElementById("clearTrackBtn");
 const startTrackBtn = document.getElementById("startTrackBtn");
 const designStats = document.getElementById("designStats");
@@ -49,6 +54,8 @@ const designer = new TrackDesigner(ctx.scene, ctx.engine, canvas);
 const minimap = new Minimap(appRoot);
 const engineAudio = new EngineAudio();
 const tireScreech = new TireScreech(engineAudio.ctx);
+const tireEffects = new TireEffects(ctx.scene);
+let raceTimer: RaceTimer | null = null;
 
 // ── mobile touch controls ──────────────────────────────────────────────────
 
@@ -174,6 +181,8 @@ function showMenu(): void {
   if (vegetation) { vegetation.dispose(); vegetation = null; }
   if (terrainFeatures) { terrainFeatures.dispose(); terrainFeatures = null; }
   if (endlessProps) { endlessProps.dispose(); endlessProps = null; }
+  if (raceTimer) { raceTimer.dispose(); raceTimer = null; }
+  tireEffects.clear();
   designer.deactivate();
   designHint?.classList.remove("visible");
   designPanel?.classList.remove("visible");
@@ -203,9 +212,11 @@ function enterDesignMode(): void {
   if (vegetation) { vegetation.dispose(); vegetation = null; }
   if (terrainFeatures) { terrainFeatures.dispose(); terrainFeatures = null; }
   if (endlessProps) { endlessProps.dispose(); endlessProps = null; }
+  if (raceTimer) { raceTimer.dispose(); raceTimer = null; }
+  tireEffects.clear();
   designer.clear();
   designer.activate();
-  designHint?.classList.add("visible");
+  designHint?.classList.toggle("visible", !!editorHintToggle?.checked);
   designPanel?.classList.add("visible");
   updateDesignStats();
   minimap.hide();
@@ -228,6 +239,9 @@ function startDrive(built: BuiltTrack): void {
     built.centerline,
     { x: built.spawn.position.x, z: built.spawn.position.z },
   );
+  if (raceTimer) raceTimer.dispose();
+  raceTimer = new RaceTimer(ctx.scene, built.centerline, built.closed);
+  tireEffects.clear();
   ctx.scene.activeCamera = followCam.camera;
   mode = "drive";
   designHint?.classList.remove("visible");
@@ -241,7 +255,7 @@ function startDrive(built: BuiltTrack): void {
 function enterDriveModeFromDesigner(): void {
   const drawn = designer.deactivate();
   if (drawn.length < 2) { designer.activate(); return; }
-  const built = buildPlayerTrack(ctx, phys, drawn);
+  const built = buildPlayerTrack(ctx, phys, drawn, { closed: designer.isClosed() });
   if (!built) { designer.activate(); return; }
   startDrive(built);
 }
@@ -259,6 +273,8 @@ function enterDriveModeEndless(): void {
   if (vegetation) { vegetation.dispose(); vegetation = null; }
   if (terrainFeatures) { terrainFeatures.dispose(); terrainFeatures = null; }
   if (endlessProps) { endlessProps.dispose(); endlessProps = null; }
+  if (raceTimer) { raceTimer.dispose(); raceTimer = null; }
+  tireEffects.clear();
 
   // Random seed every time. Could expose a seed input later.
   const seed = (Math.random() * 0xffffffff) >>> 0;
@@ -280,13 +296,24 @@ function enterDriveModeEndless(): void {
 
 function updateDesignStats(): void {
   if (!designStats) return;
-  designStats.textContent = `${designer.keyPointCount()} points · ${designer.scaleText()}`;
+  designStats.textContent = designer.statsText();
 }
 
 const onCurveInput = (): void => {
   const value = Number(curveSlider?.value ?? 65) / 100;
   designer.setCurve(value);
   updateDesignStats();
+};
+const onSegmentModeChange = (): void => {
+  designer.setSegmentMode(segmentMode?.value === "line" ? "line" : "curve");
+  updateDesignStats();
+};
+const onClosedTrackChange = (): void => {
+  designer.setClosed(!!closedTrackToggle?.checked);
+  updateDesignStats();
+};
+const onEditorHintToggle = (): void => {
+  designHint?.classList.toggle("visible", !!editorHintToggle?.checked && mode === "design");
 };
 const onClearTrack = (): void => {
   designer.clear();
@@ -296,6 +323,9 @@ const onStartTrack = (): void => {
   if (mode === "design" && designer.hasUsableStroke()) enterDriveModeFromDesigner();
 };
 curveSlider?.addEventListener("input", onCurveInput);
+segmentMode?.addEventListener("change", onSegmentModeChange);
+closedTrackToggle?.addEventListener("change", onClosedTrackChange);
+editorHintToggle?.addEventListener("change", onEditorHintToggle);
 clearTrackBtn?.addEventListener("click", onClearTrack);
 startTrackBtn?.addEventListener("click", onStartTrack);
 
@@ -351,6 +381,8 @@ ctx.engine.runRenderLoop(() => {
     const cosy = 1 - 2 * (r.y * r.y + r.x * r.x);
     const yaw = Math.atan2(siny, cosy);
     minimap.draw(pos.x, pos.z, yaw, vehicle.speedKmh() / 3.6, dt);
+    raceTimer?.update({ x: pos.x, z: pos.z, yaw }, dt);
+    tireEffects.update({ x: pos.x, z: pos.z }, yaw, vehicle.tireSlip, vehicle.speedKmh() / 3.6, dt);
 
     engineAudio.update(input.state.throttle, vehicle.speedKmh() / 3.6, dt);
     tireScreech.update(vehicle.tireSlip, vehicle.speedKmh() / 3.6);
@@ -395,8 +427,13 @@ ctx.engine.runRenderLoop(() => {
       const mobileHud = isTouchDevice
         ? `Tilt       steer\nPedals     gas / brake\n`
         : `WASD / Arrows  drive\n`;
+      const race = raceTimer?.snapshot();
+      const raceHud = race?.enabled
+        ? `LAP ${race.lap}  CP ${race.checkpoint}/${race.checkpointCount}\nTIME ${formatLap(race.currentLapMs)}\nBEST ${formatLap(race.bestLapMs)}\n`
+        : "";
       hud.textContent =
         `SPEED ${speed} km/h\n` +
+        raceHud +
         mobileHud +
         `Space          handbrake\n` +
         `R              reset to start\n` +
@@ -415,6 +452,9 @@ if (import.meta.hot) {
     btnMenu?.removeEventListener("click", onMobileMenuClick);
     motionGateBtn?.removeEventListener("click", onMotionGateClick);
     curveSlider?.removeEventListener("input", onCurveInput);
+    segmentMode?.removeEventListener("change", onSegmentModeChange);
+    closedTrackToggle?.removeEventListener("change", onClosedTrackChange);
+    editorHintToggle?.removeEventListener("change", onEditorHintToggle);
     clearTrackBtn?.removeEventListener("click", onClearTrack);
     startTrackBtn?.removeEventListener("click", onStartTrack);
     for (const p of carPreviews) p.dispose();
@@ -424,6 +464,8 @@ if (import.meta.hot) {
     minimap.dispose();
     engineAudio.dispose();
     tireScreech.dispose();
+    tireEffects.dispose();
+    if (raceTimer) raceTimer.dispose();
     if (vehicle) vehicle.dispose();
     if (track) track.dispose();
     if (endless) endless.dispose();

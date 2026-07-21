@@ -20,6 +20,8 @@ export interface BuiltTrack {
   root: TransformNode;
   /** Collider handle so we can free it on rebuild. */
   colliderHandle: number;
+  /** Whether the centerline is a loop suitable for lap timing. */
+  closed: boolean;
   /** Free meshes + physics. */
   dispose(): void;
 }
@@ -312,6 +314,7 @@ export function buildPlayerTrack(
     centerline,
     root,
     colliderHandle: collider.handle,
+    closed: !!opts?.closed,
     dispose() {
       const mats = collectNodeMaterials(root, "track.");
       root.dispose(false, true);
